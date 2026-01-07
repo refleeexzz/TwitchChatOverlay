@@ -1,0 +1,153 @@
+<Window x:Class="TwitchChatOverlay.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Settings" 
+        Height="450" 
+        Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#FF2D2D30">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Settings content -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Twitch Channel -->
+                <TextBlock Text="Twitch Settings" 
+                           Foreground="White" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Margin="0,0,0,10"/>
+                
+                <TextBlock Text="Channel Name:" 
+                           Foreground="#FFCCCCCC" 
+                           Margin="0,0,0,5"/>
+                <TextBox x:Name="TxtChannelName"
+                         Height="30"
+                         Padding="5"
+                         FontSize="13"
+                         Background="#FF3F3F46"
+                         Foreground="White"
+                         BorderBrush="#FF555555"
+                         Margin="0,0,0,15"/>
+                
+                <!-- Appearance -->
+                <TextBlock Text="Appearance" 
+                           Foreground="White" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Margin="0,15,0,10"/>
+                
+                <TextBlock Text="Opacity Level:" 
+                           Foreground="#FFCCCCCC" 
+                           Margin="0,0,0,5"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <Slider x:Name="SliderOpacity"
+                            Width="280"
+                            Minimum="0"
+                            Maximum="255"
+                            TickFrequency="15"
+                            IsSnapToTickEnabled="True"
+                            ValueChanged="SliderOpacity_ValueChanged"/>
+                    <TextBlock x:Name="TxtOpacityValue"
+                               Text="50%"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Width="50"/>
+                </StackPanel>
+                
+                <TextBlock Text="Zoom Level:" 
+                           Foreground="#FFCCCCCC" 
+                           Margin="0,0,0,5"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <Slider x:Name="SliderZoom"
+                            Width="280"
+                            Minimum="0.5"
+                            Maximum="2.0"
+                            TickFrequency="0.1"
+                            IsSnapToTickEnabled="True"
+                            ValueChanged="SliderZoom_ValueChanged"/>
+                    <TextBlock x:Name="TxtZoomValue"
+                               Text="100%"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"
+                               Width="50"/>
+                </StackPanel>
+                
+                <!-- Behavior -->
+                <TextBlock Text="Behavior" 
+                           Foreground="White" 
+                           FontSize="16" 
+                           FontWeight="Bold"
+                           Margin="0,15,0,10"/>
+                
+                <CheckBox x:Name="ChkAutoHideBorders"
+                          Content="Auto-hide borders on startup"
+                          Foreground="#FFCCCCCC"
+                          Margin="0,0,0,10"/>
+                
+                <CheckBox x:Name="ChkHideFromOBS"
+                          Content="Hide from OBS / Screen Capture"
+                          Foreground="#FFCCCCCC"
+                          Margin="0,0,0,10"
+                          ToolTip="Makes the overlay invisible to streaming software"/>
+                
+                <CheckBox x:Name="ChkHideTaskbarIcon"
+                          Content="Hide taskbar icon in overlay mode"
+                          Foreground="#FFCCCCCC"
+                          Margin="0,0,0,10"/>
+                
+                <!-- Info -->
+                <Border Background="#FF1E1E1E" 
+                        Padding="10" 
+                        Margin="0,20,0,0"
+                        CornerRadius="5">
+                    <TextBlock TextWrapping="Wrap" 
+                               Foreground="#FFAAAAAA" 
+                               FontSize="11">
+                        <Run Text="💡 Tip: " FontWeight="Bold"/>
+                        <Run Text="Right-click the overlay window to access quick settings. Use 'Hide Borders' to enable click-through overlay mode."/>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,15,0,0">
+            <Button x:Name="BtnOK"
+                    Content="OK"
+                    Width="80"
+                    Height="30"
+                    Margin="0,0,10,0"
+                    Click="BtnOK_Click"
+                    IsDefault="True"
+                    Background="#FF0E639C"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"/>
+            <Button x:Name="BtnCancel"
+                    Content="Cancel"
+                    Width="80"
+                    Height="30"
+                    Click="BtnCancel_Click"
+                    IsCancel="True"
+                    Background="#FF3F3F46"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"/>
+        </StackPanel>
+    </Grid>
+</Window>
