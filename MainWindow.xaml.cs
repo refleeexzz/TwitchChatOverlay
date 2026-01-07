@@ -43,17 +43,24 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private void Window_SourceInitialized(object sender, EventArgs e)
     {
         _hwnd = new WindowInteropHelper(this).Handle;
         
-        // apply toolwindow style to remain hidden from screen capture software
-        if (_settings.HideFromOBS)
+        // apply toolwindow style immediately to hide from OBS/screen capture
+        WindowHelper.SetWindowToolWindow(_hwnd);
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_hwnd == IntPtr.Zero)
         {
+            _hwnd = new WindowInteropHelper(this).Handle;
             WindowHelper.SetWindowToolWindow(_hwnd);
         }
         
-        SetDisplayMode(_settings.AutoHideBorders ? WindowDisplayMode.Overlay : WindowDisplayMode.Setup);
+        // always start in setup mode so user can position the window
+        SetDisplayMode(WindowDisplayMode.Setup);
         WindowHelper.SetWindowTopMost(_hwnd);
         
         // initialize tray icon
@@ -479,6 +486,12 @@ public partial class MainWindow : Window
 
     private void ShowSettingsDialog()
     {
+        // save current position before opening dialog
+        _settings.WindowLeft = this.Left;
+        _settings.WindowTop = this.Top;
+        _settings.WindowWidth = this.Width;
+        _settings.WindowHeight = this.Height;
+        
         // can't interact with dialogs while in overlay mode
         if (_currentMode == WindowDisplayMode.Overlay)
         {
@@ -492,9 +505,26 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog() == true)
         {
+            var oldChannel = _settings.TwitchChannel;
             _settings = dialog.UpdatedSettings;
+            
+            // restore current window position (don't reset it)
+            _settings.WindowLeft = this.Left;
+            _settings.WindowTop = this.Top;
+            _settings.WindowWidth = this.Width;
+            _settings.WindowHeight = this.Height;
+            
             _settings.Save();
-            ApplyWindowSettings();
+            
+            // only apply opacity, don't move window
+            SetBackgroundOpacity(_settings.OpacityLevel);
+            
+            // reconnect if channel changed
+            if (oldChannel != _settings.TwitchChannel && !string.IsNullOrWhiteSpace(_settings.TwitchChannel))
+            {
+                ConnectToTwitch(_settings.TwitchChannel);
+            }
+            
             UpdateStatus("Settings saved");
         }
     }

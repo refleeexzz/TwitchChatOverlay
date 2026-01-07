@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:TwitchChatOverlay"
         mc:Ignorable="d"
         Title="Twitch Chat Overlay" 
+        Icon="icon.ico"
         Height="600" 
         Width="350"
         WindowStyle="None"
@@ -18,6 +19,7 @@
         ResizeMode="CanResizeWithGrip"
         MouseDown="Window_MouseDown"
         Loaded="Window_Loaded"
+        SourceInitialized="Window_SourceInitialized"
         Closing="Window_Closing">
     
     <Window.Resources>

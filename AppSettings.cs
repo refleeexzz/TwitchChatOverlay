@@ -9,7 +9,7 @@ public class AppSettings
     public string TwitchChannel { get; set; } = "";
     public double ZoomLevel { get; set; } = 1.0;
     public byte OpacityLevel { get; set; } = 128;
-    public bool AutoHideBorders { get; set; } = true;
+    public bool AutoHideBorders { get; set; } = false;
     public bool HideFromOBS { get; set; } = true;
     public bool HideTaskbarIcon { get; set; } = true;
     

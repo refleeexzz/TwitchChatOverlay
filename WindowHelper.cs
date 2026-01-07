@@ -15,10 +15,17 @@ public static class WindowHelper
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TRANSPARENT = 0x20;
     public const int WS_EX_LAYERED = 0x80000;
-    public const int WS_EX_TOOLWINDOW = 0x80; // prevents window from appearing in screen captures
+    public const int WS_EX_TOOLWINDOW = 0x80;
+    public const int WS_EX_APPWINDOW = 0x40000;
+    
+    public const uint WDA_EXCLUDEFROMCAPTURE = 0x11;
 
     private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
     private const uint SWP_NOSIZE = 0x0001;
@@ -42,8 +49,9 @@ public static class WindowHelper
     // applies toolwindow style, making it invisible to OBS and similar capture software
     public static void SetWindowToolWindow(IntPtr hwnd)
     {
-        var extendedStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle.ToInt64() | WS_EX_TOOLWINDOW));
+        // use windows 10+ api to completely exclude from screen capture
+        // this method preserves taskbar icon unlike WS_EX_TOOLWINDOW
+        SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
     }
 
     // forces window to stay above all others using z-order manipulation

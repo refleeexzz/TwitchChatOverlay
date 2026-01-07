@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
 using WpfApp = System.Windows.Application;
@@ -17,7 +18,7 @@ public class TrayIconManager : IDisposable
         
         _notifyIcon = new NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadCustomIcon(),
             Visible = true,
             Text = "Twitch Chat Overlay"
         };
@@ -105,6 +106,20 @@ public class TrayIconManager : IDisposable
             _mainWindow.Activate();
             _mainWindow.Focus();
         });
+    }
+
+    private Icon LoadCustomIcon()
+    {
+        try
+        {
+            if (System.IO.File.Exists("icon.ico"))
+            {
+                return new Icon("icon.ico");
+            }
+        }
+        catch { }
+        
+        return SystemIcons.Application;
     }
 
     private void ShowChannelDialog()

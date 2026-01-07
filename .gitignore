@@ -5,3 +5,8 @@ obj/
 .vs/
 *.cache
 *.csproj.user
+
+# installer files
+installer.iss
+INSTALLER.md
+installer/
