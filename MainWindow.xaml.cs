@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -14,6 +17,10 @@ public partial class MainWindow : Window
     private WindowDisplayMode _currentMode = WindowDisplayMode.Setup;
     private IntPtr _hwnd;
     private TrayIconManager? _trayIcon;
+    private TcpClient? _twitchIrcClient;
+    private StreamReader? _twitchReader;
+    private StreamWriter? _twitchWriter;
+    private bool _isConnected = false;
     
     public ObservableCollection<ChatMessage> Messages { get; set; } = new ObservableCollection<ChatMessage>();
     
@@ -28,7 +35,12 @@ public partial class MainWindow : Window
         ApplyWindowSettings();
         ChatMessages.ItemsSource = Messages;
         
-        AddTestMessages();
+        // show placeholder if no channel set
+        if (string.IsNullOrWhiteSpace(_settings.TwitchChannel))
+        {
+            AddSystemMessage("Waiting for you to set a Twitch channel...");
+            AddSystemMessage("Right-click the tray icon → Set Channel");
+        }
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -47,7 +59,15 @@ public partial class MainWindow : Window
         // initialize tray icon
         _trayIcon = new TrayIconManager(this);
         
-        UpdateStatus($"Connected to: {_settings.TwitchChannel}");
+        // connect to twitch if channel is set
+        if (!string.IsNullOrWhiteSpace(_settings.TwitchChannel))
+        {
+            ConnectToTwitch(_settings.TwitchChannel);
+        }
+        else
+        {
+            UpdateStatus("No channel configured");
+        }
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -58,6 +78,7 @@ public partial class MainWindow : Window
         _settings.WindowHeight = this.Height;
         _settings.Save();
         
+        DisconnectFromTwitch();
         _trayIcon?.Dispose();
     }
 
@@ -172,7 +193,142 @@ public partial class MainWindow : Window
 
     #endregion
 
+    #region Twitch Integration
+
+    private async void ConnectToTwitch(string channel)
+    {
+        try
+        {
+            DisconnectFromTwitch();
+            
+            _isConnected = false;
+            UpdateStatus($"Connecting to #{channel}...");
+
+            _twitchIrcClient = new TcpClient();
+            await _twitchIrcClient.ConnectAsync("irc.chat.twitch.tv", 6667);
+
+            _twitchReader = new StreamReader(_twitchIrcClient.GetStream());
+            _twitchWriter = new StreamWriter(_twitchIrcClient.GetStream()) { AutoFlush = true };
+
+            // anonymous login (no oauth needed for reading)
+            var username = "justinfan" + new Random().Next(10000, 99999);
+            await _twitchWriter.WriteLineAsync($"NICK {username}");
+            await _twitchWriter.WriteLineAsync($"JOIN #{channel.ToLower()}");
+
+            _isConnected = true;
+            Messages.Clear();
+            AddSystemMessage($"Connected to #{channel}");
+            UpdateStatus($"Connected to #{channel}");
+
+            // start reading messages
+            _ = Task.Run(ReadTwitchChat);
+        }
+        catch (Exception ex)
+        {
+            _isConnected = false;
+            AddSystemMessage($"Connection error: {ex.Message}");
+            UpdateStatus("Connection failed");
+        }
+    }
+
+    private async Task ReadTwitchChat()
+    {
+        try
+        {
+            while (_isConnected && _twitchReader != null)
+            {
+                var line = await _twitchReader.ReadLineAsync();
+                if (line == null) break;
+
+                // respond to ping
+                if (line.StartsWith("PING"))
+                {
+                    await _twitchWriter!.WriteLineAsync("PONG :tmi.twitch.tv");
+                    continue;
+                }
+
+                // parse chat messages
+                // format: :username!username@username.tmi.twitch.tv PRIVMSG #channel :message
+                if (line.Contains("PRIVMSG"))
+                {
+                    try
+                    {
+                        var userEnd = line.IndexOf('!');
+                        var messageStart = line.IndexOf(':', 1);
+                        
+                        if (userEnd > 1 && messageStart > userEnd)
+                        {
+                            var username = line.Substring(1, userEnd - 1);
+                            var message = line.Substring(messageStart + 1);
+                            
+                            AddChatMessage(username, message);
+                        }
+                    }
+                    catch { /* skip malformed messages */ }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (_isConnected)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    AddSystemMessage($"Disconnected: {ex.Message}");
+                    UpdateStatus("Disconnected");
+                });
+            }
+        }
+        finally
+        {
+            _isConnected = false;
+        }
+    }
+
+    private void DisconnectFromTwitch()
+    {
+        _isConnected = false;
+        
+        try
+        {
+            _twitchWriter?.Close();
+            _twitchReader?.Close();
+            _twitchIrcClient?.Close();
+        }
+        catch { /* ignore cleanup errors */ }
+        
+        _twitchWriter?.Dispose();
+        _twitchReader?.Dispose();
+        _twitchIrcClient?.Dispose();
+        
+        _twitchWriter = null;
+        _twitchReader = null;
+        _twitchIrcClient = null;
+    }
+
+    #endregion
+
     #region Chat Message Management
+
+    private void AddSystemMessage(string message)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            Messages.Add(new ChatMessage 
+            { 
+                Username = "System", 
+                Message = message,
+                IsSystemMessage = true
+            });
+            
+            ChatScroll.ScrollToBottom();
+            
+            if (Messages.Count > 100)
+            {
+                Messages.RemoveAt(0);
+            }
+        });
+    }
 
     public void AddChatMessage(string username, string message)
     {
@@ -187,16 +343,6 @@ public partial class MainWindow : Window
                 Messages.RemoveAt(0);
             }
         });
-    }
-
-    private void AddTestMessages()
-    {
-        AddChatMessage("System", "Welcome to Twitch Chat Overlay!");
-        AddChatMessage("Viewer1", "Hello chat!");
-        AddChatMessage("Viewer2", "This overlay looks amazing!");
-        AddChatMessage("Moderator", "Welcome everyone to the stream!");
-        AddChatMessage("Subscriber", "Just subscribed! Love the content!");
-        AddChatMessage("System", "Right-click for options. Click 'Hide Borders' to enable overlay mode.");
     }
 
     #endregion
@@ -313,6 +459,9 @@ public partial class MainWindow : Window
         _settings.Save();
         UpdateStatus($"Channel set to: {channel}");
         ChannelNameText.Text = $"#{channel}";
+        
+        // reconnect to new channel
+        ConnectToTwitch(channel);
     }
 
     public void ResetWindowPosition()
@@ -365,4 +514,5 @@ public class ChatMessage
 {
     public string Username { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+    public bool IsSystemMessage { get; set; } = false;
 }
