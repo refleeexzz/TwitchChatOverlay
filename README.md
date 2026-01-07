@@ -90,7 +90,6 @@ Built with .NET and WPF for Windows. Uses native Windows APIs to achieve click-t
 ## Roadmap
 
 Future additions planned:
-- TwitchLib integration for live chat connection
 - Emote support (BTTV, FFZ, 7TV)
 - Badge display for subscribers/mods
 - Custom styling options
