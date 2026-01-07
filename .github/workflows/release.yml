@@ -1,0 +1,58 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+      
+    - name: Copy icon to publish folder
+      run: |
+        Copy-Item "icon.ico" "bin\Release\net10.0-windows\win-x64\publish\"
+        Copy-Item -Recurse "img" "bin\Release\net10.0-windows\win-x64\publish\"
+      shell: pwsh
+      
+    - name: Create ZIP
+      run: Compress-Archive -Path "bin\Release\net10.0-windows\win-x64\publish\*" -DestinationPath "TwitchChatOverlay-win-x64.zip"
+      shell: pwsh
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Twitch Chat Overlay - ${{ github.ref_name }}
+        body_path: RELEASE_NOTES.md
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./TwitchChatOverlay-win-x64.zip
+        asset_name: TwitchChatOverlay-win-x64.zip
+        asset_content_type: application/zip
